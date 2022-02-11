@@ -16,4 +16,6 @@ python3 -m pip install -U discord.py
 # Windows
 py -3 -m pip install -U discord.py
 ```
+(You will also need python)
+
 You are allowed to do what you would like with this bot just please make sure that you credit me. Otherwise have fun
