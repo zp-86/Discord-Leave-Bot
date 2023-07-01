@@ -1,16 +1,23 @@
 import discord
-from discord.ext import commands
-import datetime
+from discord import app_commands
 
-from urllib import parse, request
-import re
-
-from discord.ext.commands import Context
-
+#The server id of the server you want to run the commands in
+serverid=
+#Paste your bot token below
 Token = 'Bot Token Here'
 
-client = commands.Bot(command_prefix='$', description="This is a Leave Tool User#2987")
+server = discord.Object(id=serverid)
+class MyClient(discord.Client):
+    def __init__(self, *, intents: discord.Intents):
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
+    async def setup_hook(self):
+        # This copies the global commands over to your guild.
+        self.tree.copy_global_to(guild=server)
+        await self.tree.sync(guild=server)
 
+intents = discord.Intents.default()
+client = MyClient(intents=intents)
 
 @client.event
 async def on_ready():
@@ -19,39 +26,49 @@ async def on_ready():
     async for guild in client.fetch_guilds(limit=150):
         print(guild.name, guild.id)
 
-
-@client.command()
-async def leave(ctx, arg):
-    to_leave = client.get_guild(int(arg))
+@client.tree.command()
+@app_commands.describe(
+    sid='The server ID to leave'
+)
+async def leave(interaction: discord.Interaction, sid: str):
+    to_leave = client.get_guild(int(sid))
     await to_leave.leave()
-    await ctx.reply('Left the server!', mention_author=True)
+    await interaction.response.send_message(f'Left the server! ({sid})', ephemeral=True)
 
-
-
-@client.command()
-async def guilds(ctx):
+@client.tree.command()
+async def guilds(interaction: discord.Interaction):
+    guilds_info = []
     async for guild in client.fetch_guilds(limit=250):
-        await ctx.send(guild.name)
-        await ctx.send(guild.id)
+        name_list = [str(name) for name in guild.name] if isinstance(guild.name, (list, tuple)) else [str(guild.name)]
+        id_list = [str(id_) for id_ in guild.id] if isinstance(guild.id, (list, tuple)) else [str(guild.id)]
+        name_str = ', '.join(name_list)
+        id_str = ', '.join(id_list)
+        guild_info = f"{name_str}, {id_str}"
+        guilds_info.append(guild_info)
+
+    message = '\n'.join(guilds_info)
+    await interaction.response.send_message(message, ephemeral=True)
 
 
-@client.command()
-async def test(ctx):
-    await ctx.reply('Its working!', mention_author=True)
 
 
-@client.command()
-async def info(ctx):
-    await ctx.reply('Hey! This is a Discord bot that can leave servers made by User#2987, for commands use $cmds, to leave a server use $leave',
-                    mention_author=True)
+@client.tree.command()
+async def test(interaction: discord.Interaction):
+    await interaction.response.send_message(f'Hi, {interaction.user.mention}', ephemeral=True)
 
 
-@client.command()
-async def cmds(ctx):
-    await ctx.reply(
-                    '$test - Is it working?  '
-                    '$Info - Info about the bot'
-                    '$guilds - Shows all guilds the bot is in (Limit 250)  ', mention_author=True)
+@client.tree.command()
+async def info(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        'Hey! This is a Discord bot that can leave servers made by user86, for commands use /cmds, to leave a server use /leave', ephemeral=True)
+
+
+@client.tree.command()
+async def cmds(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        '/test - Is it working? \n '
+        '/Info - Info about the bot \n '
+        '/guilds - Shows all guilds the bot is in (Limit 250)', ephemeral=True)
 
 
 client.run(Token)
